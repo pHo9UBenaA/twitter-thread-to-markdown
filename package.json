@@ -1,0 +1,27 @@
+{
+	"name": "my-bun-template",
+	"version": "1.0.0",
+	"description": "",
+	"scripts": {
+		"build": "bun run ./bun.build.js",
+		"format": "biome format --write .",
+		"lint": "biome lint --write .",
+		"check": "biome check --write ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
+		"@types/bun": "latest",
+		"@types/chrome": "^0.0.287",
+		"@types/turndown": "^5.0.5",
+		"glob": "^11.0.0",
+		"turndown": "^7.2.0",
+		"typescript": "^5.0.0"
+	},
+	"keywords": [],
+	"author": "Komiya",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/pHo9UBenaA/my-bun-template"
+	},
+	"license": "MIT"
+}
