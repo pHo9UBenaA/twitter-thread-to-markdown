@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Twitter Thread To Markdown",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Extracts Twitter threads and copies them to clipboard in Markdown format. Useful for blogs and note-taking!",
 	"permissions": ["activeTab", "scripting", "clipboardWrite", "contextMenus"],
 	"background": {
