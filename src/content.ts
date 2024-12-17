@@ -1,9 +1,11 @@
 // TODO:
 // フォーマット
 // リンクなどでリッチなリンクの不要な情報を取得している
-// リプ欄にあるプロモーションのツイートが取得されてしまう（プロモfーションと別の人のリプが同時に取得される事象があったのできちんと同期取れてないかも）->多分userElementsとtweetElementsの数が一致していない
-// 絵文字が別のものに差し替えられている時にリンクが付いてたりする
+// 絵文字が画像に差し替えられている時にリンクが付いてたりする
 // もっと見つけるで同じ人のツイートが出てきた時にコピーされてしまう
+// コマンドで実行できるようにする
+
+// リプ欄にあるプロモーションのツイートが取得されてしまう（プロモfーションと別の人のリプが同時に取得される事象があったのできちんと同期取れてないかも）->多分userElementsとtweetElementsの数が一致していない
 
 import TurndownService from 'turndown';
 
@@ -11,8 +13,6 @@ const separator = '--';
 
 const succeededMessage = '処理成功';
 const failedMessage = '処理失敗';
-
-const turndownService = new TurndownService();
 
 const wrapWithNewline = (text: string | null | undefined): string => {
 	if (!text) return '';
@@ -33,6 +33,10 @@ const getOriginalURL = async (shortenedURL: string) => {
 		console.error(error);
 		throw new Error('エラー');
 	}
+};
+
+const windowAlert = (message: string) => {
+	window.alert(message);
 };
 
 const getUserName = (element: Element): string | null | undefined => {
@@ -69,78 +73,127 @@ const getParentUserName = (): string => {
 const extractTweetUserName = (
 	tweetElement: Element,
 ): string | null | undefined => {
-	const targetUserElement = tweetElement.querySelector(
+	const targetUserNameElement = tweetElement.querySelector(
 		'[data-testid="User-Name"]',
 	);
 
-	if (!targetUserElement) {
+	if (!targetUserNameElement) {
 		throw new Error('抽出対象のスレッドのユーザー名が見つかりませんでした。');
 	}
 
-	return getUserName(targetUserElement);
+	return getUserName(targetUserNameElement);
 };
 
 const extractTweetText = (tweetElement: Element): string => {
-	const tweetTextElement = tweetElement.querySelector(
-		'[data-testid="tweetText"]',
-	);
+	const textElement = tweetElement.querySelector('[data-testid="tweetText"]');
 
-	const newLineReplacedTweetTextElement =
-		tweetTextElement?.innerHTML.replace(/(\r\n|\n|\r)/g, '<br>') ?? '';
+	const newLineReplacedTextElement =
+		textElement?.innerHTML.replace(/(\r\n|\n|\r)/g, '<br>') ?? '';
 
-	const tweetText = turndownService.turndown(newLineReplacedTweetTextElement);
+	// TODO: aのリンクが短縮のままになっている。ハッシュタグがパスのみになっている。
+	const turndownService = new TurndownService().addRule('img-filter', {
+		filter: 'img',
+		replacement: (content, node) => {
+			if (node instanceof HTMLElement) {
+				const alt = node.getAttribute('alt');
+				return alt ?? '';
+			}
+			return '';
+		},
+	});
+	const text = turndownService.turndown(newLineReplacedTextElement);
 
-	return tweetText;
+	return text;
 };
 
-const extractTweetLink = async (tweetElement: Element): Promise<string> => {
-	const tweetLinkElement = tweetElement.querySelector(
-		'[data-testid="card.layoutLarge.media"]',
-	);
-
-	if (!tweetLinkElement) {
-		return '';
+const extractCardMediaLinkElement = async (
+	cardMediaLinkElement: Element,
+): Promise<string> => {
+	const anchorHref = cardMediaLinkElement.querySelector('a')?.href;
+	const title = cardMediaLinkElement.querySelector('span')?.textContent;
+	if (!anchorHref || !title) {
+		throw new Error('リンクまたはタイトルの取得に失敗しました。');
 	}
 
-	const anchorElement = tweetLinkElement.querySelector('a');
-	const spanElement = tweetLinkElement.querySelector('span');
-
-	if (!anchorElement || !spanElement?.textContent) {
-		// <div class="css-175oi2r r-1adg3ll r-2dkq44 r-1emcu8v" id="id__x8bb6gjx0yk" data-testid="card.layoutLarge.media"><a href="https://t.co/8T1cRDQnTS" rel="noopener noreferrer nofollow" target="_blank" aria-label="prtimes.jp 新しい福利厚生のHQ、20億円のシリーズB資金調達を実施。同時に7つの新プロダクトを発表" role="link" class="css-175oi2r r-1udh08x r-13qz1uu r-o7ynqc r-6416eg r-1ny4l3l r-1loqt21"><div class="css-175oi2r r-1adg3ll r-1udh08x"><div class="r-1adg3ll r-13qz1uu" style="padding-bottom: 52.356%;"></div><div class="r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-ipm5af r-13qz1uu"><div class="css-175oi2r r-1mlwlqe r-1udh08x r-417010 r-1p0dtai r-1d2f490 r-u8s1d r-zchlnj r-ipm5af" style="margin: 0px;"><div class="css-175oi2r r-1niwhzg r-vvn4in r-u6sd8q r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-13qz1uu r-1wyyakw r-4gszlv" style="background-image: url(&quot;https://pbs.twimg.com/card_img/1867041896943718400/lalPZ6uk?format=jpg&amp;name=medium&quot;);"></div><img alt="" draggable="true" src="https://pbs.twimg.com/card_img/1867041896943718400/lalPZ6uk?format=jpg&amp;name=medium" class="css-9pa8cd"></div></div></div><div class="css-175oi2r r-vznvhx r-rki7wi r-u8s1d r-14fd9ze"><div class="css-175oi2r r-1awozwy r-k200y r-z2wwpe r-z80fyv r-1777fci r-is05cd r-loe9s5 r-dnmrzs r-633pao"><div dir="ltr" class="css-146c3p1 r-dnmrzs r-1udh08x r-3s2u2q r-bcqeeo r-qvutc0 r-1tl8opc r-fdjqy7 r-n6v787 r-1cwl3u0 r-16dba41 r-lrvibr" style="color: rgb(255, 255, 255); text-overflow: ellipsis;"><span class="css-1jxf684 r-bcqeeo r-1ttztb7 r-qvutc0 r-1tl8opc" style="text-overflow: unset;">新しい福利厚生のHQ、20億円のシリーズB資金調達を実施。同時に7つの新プロダクトを発表</span></div></div></div></a></div>
-		throw new Error('ツイートのリンクが想定していない形になっている');
-	}
-
-	const title = spanElement.textContent;
-	const url = await getOriginalURL(anchorElement.href);
+	// const title = spanElement.textContent;
+	const url = await getOriginalURL(anchorHref);
 
 	return `[${title}](${url})`;
 };
 
-const extractTweetVideoLink = (tweetElement: Element): string | null => {
-	const tweetVideoLinkElement = tweetElement.querySelector(
-		'[data-testid="card.layoutSmall.media"]',
-	);
-	if (!tweetVideoLinkElement) {
-		return null;
+const extractCardWrapperLinkElement = async (
+	cardWrapperLinkElement: Element,
+): Promise<string> => {
+	const anchorHref = cardWrapperLinkElement.querySelector('a')?.href;
+	const title = cardWrapperLinkElement
+		.querySelector('[data-testid="card.layoutSmall.detail"]')
+		?.querySelectorAll('div')[1]
+		?.querySelectorAll('span')[1]?.textContent;
+
+	if (!anchorHref || !title) {
+		console.log(anchorHref);
+		console.log(title);
+		throw new Error('リンクまたはタイトルの取得に失敗しました。');
 	}
-	const anchorElement = tweetVideoLinkElement.querySelector('a');
-	return anchorElement ? anchorElement.href : null;
+
+	const url = await getOriginalURL(anchorHref);
+
+	return `[${title}](${url})`;
 };
 
-const extractTweetPhotos = (tweetElement: Element): string => {
-	const tweetPhotoElements = tweetElement.querySelectorAll(
-		'[data-testid="tweetPhoto"]',
+const extractTweetLink = async (tweetElement: Element): Promise<string> => {
+	// // <div class="css-175oi2r r-1adg3ll r-2dkq44 r-1emcu8v" id="id__x8bb6gjx0yk" data-testid="card.layoutLarge.media"><a href="https://t.co/8T1cRDQnTS" rel="noopener noreferrer nofollow" target="_blank" aria-label="prtimes.jp 新しい福利厚生のHQ、20億円のシリーズB資金調達を実施。同時に7つの新プロダクトを発表" role="link" class="css-175oi2r r-1udh08x r-13qz1uu r-o7ynqc r-6416eg r-1ny4l3l r-1loqt21"><div class="css-175oi2r r-1adg3ll r-1udh08x"><div class="r-1adg3ll r-13qz1uu" style="padding-bottom: 52.356%;"></div><div class="r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-ipm5af r-13qz1uu"><div class="css-175oi2r r-1mlwlqe r-1udh08x r-417010 r-1p0dtai r-1d2f490 r-u8s1d r-zchlnj r-ipm5af" style="margin: 0px;"><div class="css-175oi2r r-1niwhzg r-vvn4in r-u6sd8q r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-13qz1uu r-1wyyakw r-4gszlv" style="background-image: url(&quot;https://pbs.twimg.com/card_img/1867041896943718400/lalPZ6uk?format=jpg&amp;name=medium&quot;);"></div><img alt="" draggable="true" src="https://pbs.twimg.com/card_img/1867041896943718400/lalPZ6uk?format=jpg&amp;name=medium" class="css-9pa8cd"></div></div></div><div class="css-175oi2r r-vznvhx r-rki7wi r-u8s1d r-14fd9ze"><div class="css-175oi2r r-1awozwy r-k200y r-z2wwpe r-z80fyv r-1777fci r-is05cd r-loe9s5 r-dnmrzs r-633pao"><div dir="ltr" class="css-146c3p1 r-dnmrzs r-1udh08x r-3s2u2q r-bcqeeo r-qvutc0 r-1tl8opc r-fdjqy7 r-n6v787 r-1cwl3u0 r-16dba41 r-lrvibr" style="color: rgb(255, 255, 255); text-overflow: ellipsis;"><span class="css-1jxf684 r-bcqeeo r-1ttztb7 r-qvutc0 r-1tl8opc" style="text-overflow: unset;">新しい福利厚生のHQ、20億円のシリーズB資金調達を実施。同時に7つの新プロダクトを発表</span></div></div></div></a></div>
+	const cardMediaLinkElement = tweetElement.querySelector(
+		'[data-testid="card.layoutLarge.media"]',
 	);
 
-	if (tweetPhotoElements.length < 1) {
-		return '';
+	if (cardMediaLinkElement) {
+		return await extractCardMediaLinkElement(cardMediaLinkElement);
 	}
-	let tweetPhotoString = '';
-	for (let i = 0; i < tweetPhotoElements.length; i++) {
-		tweetPhotoString += wrapWithNewline(tweetPhotoElements[i]?.innerHTML);
+
+	// <div aria-labelledby="id__nopl8ir1a0d id__2rxp4kuwj5h" class="css-175oi2r r-1kqtdi0 r-1867qdf r-1phboty r-rs99b7 r-18u37iz r-1udh08x r-o7ynqc r-6416eg r-1ny4l3l" id="id__kp2dtsv4ygr" data-testid="card.wrapper"><div aria-hidden="true" class="css-175oi2r r-1kqtdi0 r-1phboty r-1adg3ll r-1udh08x r-2dkq44 r-1ua6aaf r-1nptdac" id="id__nopl8ir1a0d" data-testid="card.layoutSmall.media" style="width: calc(130px);"><a href="https://t.co/t8RCvTSViW" rel="noopener noreferrer nofollow" target="_blank" role="link" tabindex="-1" class="css-175oi2r r-1udh08x r-13qz1uu r-o7ynqc r-6416eg r-1ny4l3l r-1loqt21"><div class="css-175oi2r r-1adg3ll r-1udh08x"><div class="r-1adg3ll r-13qz1uu" style="padding-bottom: 100%;"></div><div class="r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-ipm5af r-13qz1uu"><div class="css-175oi2r r-1mlwlqe r-1udh08x r-417010 r-1p0dtai r-1d2f490 r-u8s1d r-zchlnj r-ipm5af" style="margin: 0px;"><div class="css-175oi2r r-1niwhzg r-vvn4in r-u6sd8q r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-13qz1uu r-1wyyakw r-4gszlv" style="background-image: url(&quot;https://pbs.twimg.com/card_img/1867509854501314560/GaQkKSo7?format=jpg&amp;name=small&quot;);"></div><img alt="" draggable="true" src="https://pbs.twimg.com/card_img/1867509854501314560/GaQkKSo7?format=jpg&amp;name=small" class="css-9pa8cd"></div></div></div></a></div><div class="css-175oi2r r-16y2uox r-1wbh5a2 r-1777fci"><a href="https://t.co/t8RCvTSViW" rel="noopener noreferrer nofollow" target="_blank" role="link" class="css-175oi2r r-18u37iz r-16y2uox r-1wtj0ep r-o7ynqc r-6416eg r-1ny4l3l r-1loqt21"><div class="css-175oi2r r-16y2uox r-1wbh5a2 r-z5qs1h r-1777fci r-3o4zer r-ttdzmv r-kzbkwu" id="id__2rxp4kuwj5h" data-testid="card.layoutSmall.detail"><div dir="auto" class="css-146c3p1 r-dnmrzs r-1udh08x r-3s2u2q r-bcqeeo r-1ttztb7 r-qvutc0 r-37j5jr r-a023e6 r-rjixqe r-16dba41" style="text-overflow: unset; color: rgb(113, 118, 123);"><span class="css-1jxf684 r-bcqeeo r-1ttztb7 r-qvutc0 r-1tl8opc" style="text-overflow: unset;"><span class="css-1jxf684 r-bcqeeo r-1ttztb7 r-qvutc0 r-1tl8opc" style="text-overflow: unset;">gigazine.net</span></span></div><div dir="auto" class="css-146c3p1 r-dnmrzs r-1udh08x r-3s2u2q r-bcqeeo r-1ttztb7 r-qvutc0 r-37j5jr r-a023e6 r-rjixqe r-16dba41" style="text-overflow: unset; color: rgb(231, 233, 234);"><span class="css-1jxf684 r-bcqeeo r-1ttztb7 r-qvutc0 r-1tl8opc" style="text-overflow: unset;"><span class="css-1jxf684 r-bcqeeo r-1ttztb7 r-qvutc0 r-1tl8opc" style="text-overflow: unset;">漢字だらけの偽中国語しか投稿できない国産中華風SNS「対多」登場、匿名無料登録不要林檎端末泥端末両対応</span></span></div><div dir="auto" class="css-146c3p1 r-8akbws r-krxsd3 r-dnmrzs r-1udh08x r-bcqeeo r-1ttztb7 r-qvutc0 r-37j5jr r-a023e6 r-rjixqe r-16dba41" style="-webkit-line-clamp: 2; text-overflow: unset; color: rgb(113, 118, 123);"><span class="css-1jxf684 r-bcqeeo r-1ttztb7 r-qvutc0 r-1tl8opc" style="text-overflow: unset;"><span class="css-1jxf684 r-bcqeeo r-1ttztb7 r-qvutc0 r-1tl8opc" style="text-overflow: unset;">SNS上では「我即退社」や「我五千兆円所持希望」といったような漢字のみを並べた偽中国語の投稿を見かけることがあります。そんな偽中国語専用の掲示板「対多(ツイタ)」がリリースされていたので、実際に使ってみました。</span></span></div></div></a></div></div>
+	const cardWrapperLinkElement = tweetElement.querySelector(
+		'[data-testid="card.wrapper"]',
+	);
+
+	// 観測している範囲で2パターンあった
+	if (cardWrapperLinkElement) {
+		return await extractCardWrapperLinkElement(cardWrapperLinkElement);
 	}
-	return tweetPhotoString;
+
+	return '';
 };
+
+// const extractTweetVideoLink = (tweetElement: Element): string => {
+// 	const tweetVideoLinkElement = tweetElement.querySelector(
+// 		'[data-testid="card.layoutSmall.media"]',
+// 	);
+// 	if (!tweetVideoLinkElement) {
+// 		return '';
+// 	}
+
+// 	const anchorHref = tweetVideoLinkElement.querySelector('a')?.href;
+// 	if (!anchorHref) {
+// 		throw new Error('リンクの取得に失敗しました。');
+// 	}
+
+// 	return anchorHref
+// };
+
+// const extractTweetPhotos = (tweetElement: Element): string => {
+// 	const photoElements = tweetElement.querySelectorAll(
+// 		'[data-testid="tweetPhoto"]',
+// 	);
+
+// 	if (photoElements.length < 1) {
+// 		return '';
+// 	}
+// 	let photoString = '';
+// 	for (let i = 0; i < photoElements.length; i++) {
+// 		photoString += wrapWithNewline(photoElements[i]?.innerHTML);
+// 	}
+// 	return photoString;
+// };
 
 const generateThreadMarkdown = async (
 	parentUserName: string,
@@ -162,9 +215,9 @@ const generateThreadMarkdown = async (
 		if (i > 0) threadMarkdown += wrapWithNewline(separator);
 		threadMarkdown +=
 			wrapWithNewline(extractTweetText(tweetElements[i])) +
-			wrapWithNewline(await extractTweetLink(tweetElements[i])) +
-			wrapWithNewline(extractTweetVideoLink(tweetElements[i])) +
-			wrapWithNewline(extractTweetPhotos(tweetElements[i]));
+			wrapWithNewline(await extractTweetLink(tweetElements[i]));
+		// wrapWithNewline(extractTweetVideoLink(tweetElements[i])) +
+		// wrapWithNewline(extractTweetPhotos(tweetElements[i]));
 	}
 
 	return threadMarkdown;
@@ -172,7 +225,7 @@ const generateThreadMarkdown = async (
 
 const copyToClipboard = async (text: string): Promise<void> => {
 	try {
-		navigator.clipboard.writeText(text);
+		await navigator.clipboard.writeText(text);
 	} catch (error) {
 		console.error(error);
 		throw new Error('クリップボードへのコピーが失敗しました。');
@@ -184,10 +237,10 @@ const extractThread = async (): Promise<void> => {
 		const parentUserName = getParentUserName();
 		const threadMarkdown = await generateThreadMarkdown(parentUserName);
 		await copyToClipboard(threadMarkdown);
-		alert(succeededMessage);
+		windowAlert(succeededMessage);
 	} catch (error) {
 		console.error(error);
-		alert(failedMessage);
+		windowAlert(failedMessage);
 	}
 };
 

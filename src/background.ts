@@ -1,4 +1,7 @@
-const extractThreadId = 'extractThread';
+// manifest.json
+const commandId = 'extract-thread';
+
+const contextMenuId = 'extractThread';
 
 chrome.runtime.onInstalled.addListener(() => {
 	const removeAll = () => {
@@ -7,9 +10,8 @@ chrome.runtime.onInstalled.addListener(() => {
 
 	const create = () => {
 		chrome.contextMenus.create({
-			id: extractThreadId,
+			id: contextMenuId,
 			title: 'スレッドを抽出',
-			contexts: ['all'],
 		});
 	};
 
@@ -17,23 +19,27 @@ chrome.runtime.onInstalled.addListener(() => {
 	create();
 });
 
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-	if (info.menuItemId === extractThreadId && tab?.id !== undefined) {
-		try {
-			chrome.scripting.executeScript(
-				{
-					target: { tabId: tab.id },
-					files: ['content.js'],
-				},
-				() => {
-					if (!tab.id) return;
-					// content.jsにデータ取得の指示を送る
-					chrome.tabs.sendMessage(tab.id, { action: 'extractThread' });
-				},
-			);
-
-		} catch (err) {
-			console.error('スレッドの抽出に失敗しました: ', err);
-		}
+chrome.commands.onCommand.addListener((command, tab) => {
+	if (command === commandId && tab?.id !== undefined) {
+		executeScripts(tab.id);
 	}
 });
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+	if (info.menuItemId === contextMenuId && tab?.id !== undefined) {
+		executeScripts(tab.id);
+	}
+});
+
+const executeScripts = (tabId: number) => {
+	try {
+		chrome.scripting.executeScript(
+			{ target: { tabId: tabId }, files: ['content.js'] },
+			() => {
+				chrome.tabs.sendMessage(tabId, { action: 'extractThread' });
+			},
+		);
+	} catch (err) {
+		console.error('スレッドの抽出に失敗しました: ', err);
+	}
+};
