@@ -1,0 +1,20 @@
+{
+	"manifest_version": 3,
+	"name": "Twitter Thread To Markdown",
+	"version": "0.1.0",
+	"description": "Extracts Twitter threads and copies them to clipboard in Markdown format. Useful for blogs and note-taking!",
+	"permissions": ["activeTab", "scripting", "clipboardWrite", "contextMenus"],
+	"background": {
+		"service_worker": "background.js"
+	},
+	"host_permissions": ["https://twitter.com/*", "https://x.com/*"],
+	"commands": {
+		"extract-thread": {
+			"suggested_key": {
+				"default": "Ctrl+E",
+				"mac": "Command+E"
+			},
+			"description": "スレッドを抽出"
+		}
+	}
+}

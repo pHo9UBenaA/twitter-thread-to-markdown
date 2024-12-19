@@ -1,5 +1,5 @@
 {
-	"name": "my-bun-template",
+	"name": "twitter-thread-extractor",
 	"version": "1.0.0",
 	"description": "",
 	"scripts": {
@@ -21,7 +21,7 @@
 	"author": "Komiya",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/pHo9UBenaA/my-bun-template"
+		"url": "https://github.com/pHo9UBenaA/twitter-thread-extractor"
 	},
 	"license": "MIT"
 }
