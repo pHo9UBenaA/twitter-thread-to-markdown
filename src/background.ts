@@ -3,6 +3,9 @@ const commandId = 'extract-thread';
 
 const contextMenuId = 'extractThread';
 
+// content.ts
+const scriptActionName = 'extractThread';
+
 chrome.runtime.onInstalled.addListener(() => {
 	const removeAll = () => {
 		chrome.contextMenus.removeAll();
@@ -36,7 +39,7 @@ const executeScripts = (tabId: number) => {
 		chrome.scripting.executeScript(
 			{ target: { tabId: tabId }, files: ['content.js'] },
 			() => {
-				chrome.tabs.sendMessage(tabId, { action: 'extractThread' });
+				chrome.tabs.sendMessage(tabId, { action: scriptActionName });
 			},
 		);
 	} catch (err) {

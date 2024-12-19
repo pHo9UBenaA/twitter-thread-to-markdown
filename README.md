@@ -1,1 +1,1 @@
-# twitter-thread-to-markdown
+# twitter-thread-extractor
